@@ -1,8 +1,5 @@
 const express = require('express')
-const User = require('../models/User')
-const bycrypt = require('bcrypt')
-require('dotenv').config({ path: './.env' });
-
+const userController=require('../controllers/userController')
 const router = express.Router()
 
 
@@ -10,21 +7,17 @@ const router = express.Router()
 router.post('/login', async (req, res) => {
   const { username,password } = req.body
   try {
-    const data = await User.findOne({ username })
+   const data=await userController.login(username,password)
 
-    if (!data) {
-      return res.status(404).json({ message: 'User not found' })
-    }
-    const isMatch = await bycrypt.compare(password, data.password)
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid password' })
-    }
+   if(data.message){
+    return res.status(400).json({ message: data.message })
+   }
 
-    const { password:_, ...userData } = data
+    const { password:_, ...userData } = data.toObject()
     res.json({
-      _id:userData._id,
-      username:userData.username,
-      email:userData.email,
+      _id: userData._id,
+      username: userData.username,
+      email: userData.email,
     })
   } catch (err) {
     console.error(err)
@@ -35,14 +28,13 @@ router.post('/login', async (req, res) => {
 router.post('/register', async (req, res) => {
   const { username, email, password } = req.body
   try {
-    const hashPassword = await bycrypt.hash(password, Number(process.env.salt))
-    const newUser = new User({
-      username: username,
-      email: email,
-      password: hashPassword
-    })
-    await newUser.save()
-    res.status(201).json({ message: 'User saved successfully', item: newUser })
+
+  const result=await userController.register(username, email, password)
+
+  if(result.message){
+    return res.status(400).json({ message: result.message})
+  }
+    res.status(201).json({ result: 'User saved successfully', item: result })
   } catch (err) {
     res.status(500).json({ error: `Error saving the user,error:${err}` })
   }
